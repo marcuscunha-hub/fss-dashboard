@@ -431,11 +431,13 @@ tfoot td:first-child { text-align: left; }
 const SHEET_ID = "17omo5zHkBTHrGr6n94uE1QzwSRHh2Junqk9uRgc_tBI";
 const PUB_ID = "2PACX-1vSa6wuDGP2VccRY1pKOOrNPMBllOUgrPcTzX9dcEh_L_Os7XveX0Ve5x8ZFUGRvMuCWD53uUyUtWw9C";
 // GIDs: 0=Follow Up, 1=SF, 2=Social Selling, 3=SDRs
+const BASE = `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?output=csv`;
+const PROXY = "https://corsproxy.io/?url=";
 const SHEET_URLS = {
-  ss:     `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?output=csv&gid=2`,
-  sdr:    `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?output=csv&gid=3`,
-  sf:     `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?output=csv&gid=1`,
-  closer: `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?output=csv&gid=0`,
+  ss:     PROXY + encodeURIComponent(BASE + "&gid=2"),
+  sdr:    PROXY + encodeURIComponent(BASE + "&gid=3"),
+  sf:     PROXY + encodeURIComponent(BASE + "&gid=1"),
+  closer: PROXY + encodeURIComponent(BASE + "&gid=0"),
 };
 
 const RAW = {
