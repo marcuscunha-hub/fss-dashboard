@@ -176,7 +176,7 @@ tfoot td:first-child { text-align: left; }
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
     <span>Sincronizar</span>
   </button>
-  <div class="sync-status"><span class="sync-dot"></span>Pronto para sincronizar</div>
+  <div class="sync-status"><span class="sync-dot" style="background:var(--amber)"></span>Clique para sincronizar</div>
 </aside>
 
 <!-- MAIN -->
@@ -431,13 +431,12 @@ tfoot td:first-child { text-align: left; }
 const SHEET_ID = "17omo5zHkBTHrGr6n94uE1QzwSRHh2Junqk9uRgc_tBI";
 const PUB_ID = "2PACX-1vSa6wuDGP2VccRY1pKOOrNPMBllOUgrPcTzX9dcEh_L_Os7XveX0Ve5x8ZFUGRvMuCWD53uUyUtWw9C";
 // GIDs: 0=Follow Up, 1=SF, 2=Social Selling, 3=SDRs
-const BASE = `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?output=csv`;
-const PROXY = "https://corsproxy.io/?url=";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlx0Xn2OWefQuPFzPJmw_iQ-UvwdwdZj3SQZ7n7dAtCT3HMsEQTug1TS2s1A0PJvGU/exec";
 const SHEET_URLS = {
-  ss:     PROXY + encodeURIComponent(BASE + "&gid=2"),
-  sdr:    PROXY + encodeURIComponent(BASE + "&gid=3"),
-  sf:     PROXY + encodeURIComponent(BASE + "&gid=1"),
-  closer: PROXY + encodeURIComponent(BASE + "&gid=0"),
+  ss:     APPS_SCRIPT_URL + "?tab=ss",
+  sdr:    APPS_SCRIPT_URL + "?tab=sdr",
+  sf:     APPS_SCRIPT_URL + "?tab=sf",
+  closer: APPS_SCRIPT_URL + "?tab=closer",
 };
 
 const RAW = {
@@ -904,7 +903,7 @@ async function syncSheets() {
   btn.disabled = true;
 
   try {
-    // Fetch all 4 sheets in parallel
+    // Fetch all 4 sheets in parallel from Apps Script API
     const [ssRes, sdrRes, sfRes, closerRes] = await Promise.all([
       fetch(SHEET_URLS.ss),
       fetch(SHEET_URLS.sdr),
@@ -914,24 +913,14 @@ async function syncSheets() {
 
     if (!ssRes.ok || !sdrRes.ok || !sfRes.ok || !closerRes.ok) throw new Error('Fetch failed');
 
-    const [ssTxt, sdrTxt, sfTxt, closerTxt] = await Promise.all([
-      ssRes.text(), sdrRes.text(), sfRes.text(), closerRes.text()
+    const [ssRaw, sdrRaw, sfRaw, closerRaw] = await Promise.all([
+      ssRes.json(), sdrRes.json(), sfRes.json(), closerRes.json()
     ]);
 
-    // Parse Social Selling
-    const ssRaw = parseCSV(ssTxt);
+    // Process — Apps Script returns array of objects with header keys
     RAW.social_selling = processSSData(ssRaw);
-
-    // Parse SDRs
-    const sdrRaw = parseCSV(sdrTxt);
     RAW.sdrs = processSDRData(sdrRaw);
-
-    // Parse SF
-    const sfRaw = parseCSV(sfTxt);
     RAW.sf = processSFData(sfRaw);
-
-    // Parse Follow Up / Closer
-    const closerRaw = parseCSV(closerTxt);
     RAW.follow_up = processCloserData(closerRaw);
 
     // Re-render current page
@@ -946,6 +935,7 @@ async function syncSheets() {
 
   } catch(e) {
     console.error('Sync error:', e);
+    console.error('Sync details:', e);
     status.innerHTML = `<span class="sync-dot" style="background:var(--red)"></span>Erro: ${e.message}`;
   }
 
@@ -957,17 +947,21 @@ async function syncSheets() {
 // DATA PROCESSORS (CSV → same structure as RAW)
 // ============================================================
 function processSSData(rows) {
-  // Cols: timestamp, email, data_ref, nome, conta, abordados, agend_abordados,
-  //       leads_mkt, agend_mkt, directs, agend_directs, caixinhas, agend_caixinha,
-  //       seg_abordados, agend_seg, desqual, ind_cs, agend_ind_cs, ind_closer, agend_ind_closer
   const grouped = {};
   rows.forEach(r => {
     const vals = Object.values(r);
-    const dateSerial = vals[2];
-    const nome = (vals[3] || '').trim();
+    // Try to find date from 3rd col (index 2) or key "Métricas referentes ao dia:"
+    const dateVal = vals[2];
+    const nome = String(vals[3] || '').trim();
     if (!nome) return;
-    const d = excelDateToJS(dateSerial);
-    if (!d) return;
+    let d = null;
+    if (dateVal instanceof Date) d = dateVal;
+    else if (typeof dateVal === 'number') d = excelDateToJS(dateVal);
+    else if (typeof dateVal === 'string' && dateVal.includes('/')) {
+      const parts = dateVal.split('/');
+      if (parts.length === 3) d = new Date(parts[2], parts[1]-1, parts[0]);
+    }
+    if (!d || isNaN(d.getTime())) return;
     const mes = toMes(d);
     if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return;
     const key = `${mes}|${nome}`;
@@ -993,10 +987,17 @@ function processSDRData(rows) {
   const grouped = {};
   rows.forEach(r => {
     const vals = Object.values(r);
-    const nome = (vals[2] || '').trim();
+    const nome = String(vals[2] || '').trim();
     if (!nome) return;
-    const d = excelDateToJS(vals[1]);
-    if (!d) return;
+    let d = null;
+    const dateVal = vals[1];
+    if (dateVal instanceof Date) d = dateVal;
+    else if (typeof dateVal === 'number') d = excelDateToJS(dateVal);
+    else if (typeof dateVal === 'string' && dateVal.includes('/')) {
+      const parts = dateVal.split('/');
+      if (parts.length === 3) d = new Date(parts[2], parts[1]-1, parts[0]);
+    }
+    if (!d || isNaN(d.getTime())) return;
     const mes = toMes(d);
     if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return;
     const key = `${mes}|${nome}`;
@@ -1022,10 +1023,17 @@ function processSFData(rows) {
   const grouped = {};
   rows.forEach(r => {
     const vals = Object.values(r);
-    const nome = (vals[3] || '').trim();
+    const nome = String(vals[3] || '').trim();
     if (!nome) return;
-    const d = excelDateToJS(vals[2]);
-    if (!d) return;
+    let d = null;
+    const dateVal = vals[2];
+    if (dateVal instanceof Date) d = dateVal;
+    else if (typeof dateVal === 'number') d = excelDateToJS(dateVal);
+    else if (typeof dateVal === 'string' && dateVal.includes('/')) {
+      const parts = dateVal.split('/');
+      if (parts.length === 3) d = new Date(parts[2], parts[1]-1, parts[0]);
+    }
+    if (!d || isNaN(d.getTime())) return;
     const mes = toMes(d);
     if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return;
     const key = `${mes}|${nome}`;
@@ -1047,8 +1055,15 @@ function processCloserData(rows) {
   const grouped = {};
   rows.forEach(r => {
     const vals = Object.values(r);
-    const d = excelDateToJS(vals[2]);
-    if (!d) return;
+    let d = null;
+    const dateVal = vals[2];
+    if (dateVal instanceof Date) d = dateVal;
+    else if (typeof dateVal === 'number') d = excelDateToJS(dateVal);
+    else if (typeof dateVal === 'string' && dateVal.includes('/')) {
+      const parts = dateVal.split('/');
+      if (parts.length === 3) d = new Date(parts[2], parts[1]-1, parts[0]);
+    }
+    if (!d || isNaN(d.getTime())) return;
     const mes = toMes(d);
     if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return;
     if (!grouped[mes]) grouped[mes] = { mes, mes_label: toMesLabel(d), dias:0, novos_leads:0, respostas:0, agend:0, comparecimentos:0, no_show:0, vendas:0, taxa_comp:0, taxa_venda:0 };
