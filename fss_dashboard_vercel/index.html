@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FSS — Dashboard Comercial</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f14;
+  --bg2: #141720;
+  --bg3: #1c2030;
+  --bg4: #252a3a;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e8eaf0;
+  --text2: #8b90a0;
+  --text3: #555b6e;
+  --accent: #4f7cff;
+  --accent2: #7b5ea7;
+  --green: #3ecf8e;
+  --amber: #f5a623;
+  --red: #e85d75;
+  --teal: #36c5c5;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* LAYOUT */
+.shell { display: flex; min-height: 100vh; }
+.sidebar { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); padding: 24px 0; flex-shrink: 0; display: flex; flex-direction: column; }
+.main { flex: 1; padding: 32px; overflow-x: hidden; }
+
+/* SIDEBAR */
+.logo { padding: 0 20px 28px; border-bottom: 1px solid var(--border); }
+.logo-text { font-size: 13px; font-weight: 600; letter-spacing: 0.12em; color: var(--text); text-transform: uppercase; }
+.logo-sub { font-size: 10px; color: var(--text3); margin-top: 2px; letter-spacing: 0.06em; }
+.nav { padding: 16px 12px; flex: 1; }
+.nav-label { font-size: 9px; font-weight: 600; color: var(--text3); letter-spacing: 0.12em; text-transform: uppercase; padding: 0 8px; margin-bottom: 6px; margin-top: 16px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; color: var(--text2); transition: all 0.15s; margin-bottom: 2px; border: 1px solid transparent; }
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--bg3); color: var(--text); border-color: var(--border); }
+.nav-item.active .nav-dot { background: var(--accent); }
+.nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.sync-btn { margin: 16px 12px; padding: 10px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: var(--radius-sm); color: #fff; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.2s; }
+.sync-btn:hover { opacity: 0.85; }
+.sync-status { padding: 0 20px 12px; font-size: 10px; color: var(--text3); }
+.sync-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-right: 5px; }
+
+/* HEADER */
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+.page-title { font-size: 22px; font-weight: 500; }
+.page-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+.header-filters { display: flex; gap: 10px; }
+select { background: var(--bg3); border: 1px solid var(--border2); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; outline: none; }
+select:focus { border-color: var(--accent); }
+option { background: var(--bg3); }
+
+/* SECTION */
+.section { margin-bottom: 36px; }
+.section-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px; }
+
+/* KPI CARDS */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.kpi { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+.kpi-label { font-size: 11px; color: var(--text3); margin-bottom: 8px; }
+.kpi-value { font-size: 28px; font-weight: 300; color: var(--text); line-height: 1; }
+.kpi-value span { font-size: 14px; color: var(--text2); }
+.kpi-sub { font-size: 11px; color: var(--text3); margin-top: 6px; }
+.kpi-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 20px; margin-top: 6px; }
+.kpi-badge.up { background: rgba(62,207,142,0.12); color: var(--green); }
+.kpi-badge.dn { background: rgba(232,93,117,0.12); color: var(--red); }
+.kpi-badge.neutral { background: rgba(139,144,160,0.12); color: var(--text2); }
+
+/* CHART GRID */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.chart-grid.single { grid-template-columns: 1fr; }
+.chart-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.chart-title { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 16px; }
+.chart-wrap { position: relative; }
+
+/* TABLE */
+.table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 600px; }
+thead th { padding: 11px 14px; text-align: right; font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); white-space: nowrap; background: var(--bg3); }
+thead th:first-child { text-align: left; }
+tbody td { padding: 11px 14px; text-align: right; color: var(--text2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+tbody td:first-child { text-align: left; color: var(--text); font-weight: 500; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--bg3); }
+tfoot td { padding: 11px 14px; text-align: right; font-weight: 600; font-size: 12px; color: var(--text); background: var(--bg3); border-top: 1px solid var(--border2); }
+tfoot td:first-child { text-align: left; }
+
+/* BADGE */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+.badge.green { background: rgba(62,207,142,0.12); color: var(--green); }
+.badge.amber { background: rgba(245,166,35,0.12); color: var(--amber); }
+.badge.red { background: rgba(232,93,117,0.12); color: var(--red); }
+.badge.blue { background: rgba(79,124,255,0.12); color: var(--accent); }
+.badge.gray { background: rgba(139,144,160,0.1); color: var(--text3); }
+
+/* RANKING */
+.rank-list { display: flex; flex-direction: column; gap: 8px; }
+.rank-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg3); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.rank-pos { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text3); width: 18px; }
+.rank-name { flex: 1; font-size: 13px; font-weight: 500; }
+.rank-bar-wrap { width: 120px; height: 4px; background: var(--bg4); border-radius: 2px; }
+.rank-bar { height: 4px; border-radius: 2px; }
+.rank-val { font-size: 13px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--text); min-width: 48px; text-align: right; }
+.rank-sub { font-size: 10px; color: var(--text3); min-width: 40px; text-align: right; }
+
+/* TABS */
+.tabs { display: flex; gap: 4px; background: var(--bg3); padding: 4px; border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 20px; width: fit-content; }
+.tab { padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text3); transition: all 0.15s; }
+.tab.active { background: var(--bg2); color: var(--text); border: 1px solid var(--border2); }
+.tab:hover:not(.active) { color: var(--text2); }
+
+/* PAGE */
+.page { display: none; }
+.page.active { display: block; }
+
+/* MINI SPARKLINE */
+.spark { display: flex; align-items: flex-end; gap: 2px; height: 24px; }
+.spark-bar { width: 4px; border-radius: 2px 2px 0 0; background: var(--accent); opacity: 0.6; }
+
+/* ALERT */
+.alert { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 10px; font-size: 12px; line-height: 1.5; }
+.alert.warn { background: rgba(245,166,35,0.08); border: 1px solid rgba(245,166,35,0.2); color: var(--amber); }
+.alert.danger { background: rgba(232,93,117,0.08); border: 1px solid rgba(232,93,117,0.2); color: var(--red); }
+.alert.success { background: rgba(62,207,142,0.08); border: 1px solid rgba(62,207,142,0.2); color: var(--green); }
+
+@media (max-width: 900px) {
+  .sidebar { width: 60px; }
+  .logo-text, .logo-sub, .nav-label, .nav-item span, .sync-btn span, .sync-status { display: none; }
+  .nav-item { justify-content: center; padding: 12px; }
+  .sync-btn { padding: 12px; }
+  .chart-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-text">FSS</div>
+    <div class="logo-sub">Dashboard Comercial</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-label">Visão Geral</div>
+    <div class="nav-item active" onclick="showPage('overview')">
+      <div class="nav-dot"></div><span>Overview</span>
+    </div>
+    <div class="nav-label">Times</div>
+    <div class="nav-item" onclick="showPage('ss')">
+      <div class="nav-dot"></div><span>Social Sellers</span>
+    </div>
+    <div class="nav-item" onclick="showPage('sdr')">
+      <div class="nav-dot"></div><span>SDRs</span>
+    </div>
+    <div class="nav-item" onclick="showPage('sf')">
+      <div class="nav-dot"></div><span>Cold Email</span>
+    </div>
+    <div class="nav-item" onclick="showPage('closer')">
+      <div class="nav-dot"></div><span>Follow Up</span>
+    </div>
+  </nav>
+  <button class="sync-btn" onclick="syncSheets()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    <span>Sincronizar</span>
+  </button>
+  <div class="sync-status"><span class="sync-dot"></span>Pronto para sincronizar</div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- GLOBAL FILTERS -->
+  <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;">
+    <select id="g-mes" onchange="applyFilters()">
+      <option value="">Todos os meses</option>
+    </select>
+    <select id="g-time" onchange="applyFilters()">
+      <option value="">Todos os times</option>
+      <option value="ss">Social Selling</option>
+      <option value="sdr">SDRs</option>
+      <option value="sf">Cold Email</option>
+      <option value="closer">Follow Up</option>
+    </select>
+  </div>
+
+  <!-- =================== OVERVIEW =================== -->
+  <div id="page-overview" class="page active">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Overview</div>
+        <div class="page-sub" id="overview-sub">Consolidado geral do time comercial</div>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="kpi-overview"></div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Agendamentos por time / mês</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-overview-agend"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Ranking — total agendamentos</div>
+        <div id="ranking-agend" class="rank-list" style="max-height:240px;overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Alertas e Destaques</div>
+      <div id="alerts-overview"></div>
+    </div>
+  </div>
+
+  <!-- =================== SOCIAL SELLING =================== -->
+  <div id="page-ss" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Social Sellers</div>
+        <div class="page-sub">Abordagens, agendamentos e conversão por canal</div>
+      </div>
+      <div class="header-filters">
+        <select id="ss-pessoa" onchange="renderSS()">
+          <option value="">Todos</option>
+        </select>
+        <select id="ss-mes" onchange="renderSS()">
+          <option value="">Todos os meses</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="kpi-ss"></div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Agendamentos totais por mês</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-ss-agend"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Taxa de conversão (%) por mês</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-ss-conv"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Abordados por mês</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-ss-abord"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Canais de agendamento</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-ss-canais"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Tabela detalhada</div>
+      <div class="table-card">
+        <div class="table-scroll">
+          <table id="table-ss">
+            <thead>
+              <tr>
+                <th>Mês</th><th>Pessoa</th><th>Dias</th><th>Abordados</th>
+                <th>Agend. abord.</th><th>Agend. mkt</th><th>Agend. seg.</th>
+                <th>Total agend.</th><th>Conv. %</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-ss"></tbody>
+            <tfoot id="tfoot-ss"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== SDRs =================== -->
+  <div id="page-sdr" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">SDRs</div>
+        <div class="page-sub">Leads, respostas e agendamentos de aplicação</div>
+      </div>
+      <div class="header-filters">
+        <select id="sdr-pessoa" onchange="renderSDR()">
+          <option value="">Todos</option>
+        </select>
+        <select id="sdr-mes" onchange="renderSDR()">
+          <option value="">Todos os meses</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="kpi-sdr"></div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Agendamentos por mês</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-sdr-agend"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Taxa de resposta aquisição (%)</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="chart-sdr-conv"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Ranking de agendamentos</div>
+      <div id="ranking-sdr" class="rank-list"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Tabela detalhada</div>
+      <div class="table-card">
+        <div class="table-scroll">
+          <table id="table-sdr">
+            <thead>
+              <tr>
+                <th>Mês</th><th>SDR</th><th>Dias</th>
+                <th>Agend.</th><th>Leads aq.</th><th>Respostas</th>
+                <th>Conv. %</th><th>Leads aplic.</th><th>Agend. aplic.</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-sdr"></tbody>
+            <tfoot id="tfoot-sdr"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== SF =================== -->
+  <div id="page-sf" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Cold Email</div>
+        <div class="page-sub">Disparos, respostas e conversão por e-mail</div>
+      </div>
+      <div class="header-filters">
+        <select id="sf-pessoa" onchange="renderSF()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="kpi-sf"></div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Disparos vs Respostas por mês</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-sf-disp"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Agendamentos gerados</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-sf-agend"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Tabela detalhada</div>
+      <div class="table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Mês</th><th>Pessoa</th><th>Dias</th><th>Disparos</th><th>Respostas</th><th>Taxa resp.</th><th>Agend.</th><th>Conv. agend.</th></tr>
+            </thead>
+            <tbody id="tbody-sf"></tbody>
+            <tfoot id="tfoot-sf"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- =================== CLOSER =================== -->
+  <div id="page-closer" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">Follow Up — Maíra</div>
+        <div class="page-sub">Comparecimentos, no-shows e vendas</div>
+      </div>
+    </div>
+
+    <div class="kpi-grid" id="kpi-closer"></div>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Agendamentos vs Comparecimentos</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-closer-comp"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Vendas realizadas por mês</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="chart-closer-vendas"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Tabela detalhada</div>
+      <div class="table-card">
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Mês</th><th>Dias</th><th>Novos Leads</th><th>Agend.</th><th>Comparec.</th><th>No-Show</th><th>Taxa comp.</th><th>Vendas</th><th>Conv. venda</th></tr>
+            </thead>
+            <tbody id="tbody-closer"></tbody>
+            <tfoot id="tfoot-closer"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ============================================================
+// DATA — from Google Sheets (will sync via API when available)
+// ============================================================
+const SHEET_ID = "17omo5zHkBTHrGr6n94uE1QzwSRHh2Junqk9uRgc_tBI";
+const PUB_ID = "2PACX-1vSa6wuDGP2VccRY1pKOOrNPMBllOUgrPcTzX9dcEh_L_Os7XveX0Ve5x8ZFUGRvMuCWD53uUyUtWw9C";
+// GIDs: 0=Follow Up, 1=SF, 2=Social Selling, 3=SDRs
+const SHEET_URLS = {
+  ss:     `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?output=csv&gid=2`,
+  sdr:    `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?output=csv&gid=3`,
+  sf:     `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?output=csv&gid=1`,
+  closer: `https://docs.google.com/spreadsheets/d/e/${PUB_ID}/pub?output=csv&gid=0`,
+};
+
+const RAW = {
+  social_selling: [{"mes":"2026-01","mes_label":"Jan/2026","nome":"Andrezza","dias":10,"abordados":280.0,"agend_abordados":1.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":2.0,"agend_ind":0.0,"total_agend":4.0,"desqual":7.0,"conv":1.4},{"mes":"2026-02","mes_label":"Fev/2026","nome":"Andrezza","dias":4,"abordados":127.0,"agend_abordados":0.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":1.0,"agend_ind":0.0,"total_agend":1.0,"desqual":4.0,"conv":0.8},{"mes":"2024-11","mes_label":"Nov/2024","nome":"Carlos Eduardo","dias":1,"abordados":24.0,"agend_abordados":0.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":0.0,"agend_ind":0.0,"total_agend":0.0,"desqual":0.0,"conv":0.0},{"mes":"2025-02","mes_label":"Fev/2025","nome":"Carlos Eduardo","dias":15,"abordados":360.0,"agend_abordados":9.0,"agend_mkt":0.0,"agend_directs":1.0,"agend_seg":2.0,"agend_ind":0.0,"total_agend":12.0,"desqual":0.0,"conv":3.3},{"mes":"2025-03","mes_label":"Mar/2025","nome":"Carlos Eduardo","dias":18,"abordados":274.0,"agend_abordados":7.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":0.0,"agend_ind":0.0,"total_agend":7.0,"desqual":0.0,"conv":2.6},{"mes":"2025-04","mes_label":"Abr/2025","nome":"Carlos Eduardo","dias":21,"abordados":342.0,"agend_abordados":8.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":4.0,"agend_ind":0.0,"total_agend":12.0,"desqual":0.0,"conv":3.5},{"mes":"2025-05","mes_label":"Mai/2025","nome":"Carlos Eduardo","dias":16,"abordados":261.0,"agend_abordados":7.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":2.0,"agend_ind":0.0,"total_agend":9.0,"desqual":0.0,"conv":3.4},{"mes":"2024-10","mes_label":"Out/2024","nome":"Cynthia","dias":20,"abordados":536.0,"agend_abordados":17.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":0.0,"agend_ind":0.0,"total_agend":17.0,"desqual":0.0,"conv":3.2},{"mes":"2024-11","mes_label":"Nov/2024","nome":"Cynthia","dias":19,"abordados":464.0,"agend_abordados":18.0,"agend_mkt":0.0,"agend_directs":3.0,"agend_seg":5.0,"agend_ind":0.0,"total_agend":26.0,"desqual":0.0,"conv":5.6},{"mes":"2024-12","mes_label":"Dez/2024","nome":"Cynthia","dias":19,"abordados":416.0,"agend_abordados":11.0,"agend_mkt":0.0,"agend_directs":1.0,"agend_seg":9.0,"agend_ind":0.0,"total_agend":21.0,"desqual":0.0,"conv":5.0},{"mes":"2025-01","mes_label":"Jan/2025","nome":"Cynthia","dias":11,"abordados":252.0,"agend_abordados":8.0,"agend_mkt":0.0,"agend_directs":1.0,"agend_seg":2.0,"agend_ind":0.0,"total_agend":11.0,"desqual":0.0,"conv":4.4},{"mes":"2025-10","mes_label":"Out/2025","nome":"Enzo","dias":17,"abordados":93.0,"agend_abordados":0.0,"agend_mkt":0.0,"agend_directs":1.0,"agend_seg":7.0,"agend_ind":0.0,"total_agend":8.0,"desqual":0.0,"conv":8.6},{"mes":"2025-11","mes_label":"Nov/2025","nome":"Enzo","dias":35,"abordados":138.0,"agend_abordados":2.0,"agend_mkt":0.0,"agend_directs":2.0,"agend_seg":11.0,"agend_ind":0.0,"total_agend":15.0,"desqual":0.0,"conv":10.9},{"mes":"2025-12","mes_label":"Dez/2025","nome":"Enzo","dias":38,"abordados":162.0,"agend_abordados":4.0,"agend_mkt":1.0,"agend_directs":4.0,"agend_seg":10.0,"agend_ind":0.0,"total_agend":19.0,"desqual":0.0,"conv":11.7},{"mes":"2026-01","mes_label":"Jan/2026","nome":"Enzo","dias":32,"abordados":215.0,"agend_abordados":6.0,"agend_mkt":1.0,"agend_directs":0.0,"agend_seg":14.0,"agend_ind":0.0,"total_agend":21.0,"desqual":0.0,"conv":9.8},{"mes":"2026-02","mes_label":"Fev/2026","nome":"Enzo","dias":25,"abordados":235.0,"agend_abordados":10.0,"agend_mkt":5.0,"agend_directs":0.0,"agend_seg":8.0,"agend_ind":0.0,"total_agend":23.0,"desqual":0.0,"conv":9.8},{"mes":"2026-03","mes_label":"Mar/2026","nome":"Enzo","dias":19,"abordados":254.0,"agend_abordados":13.0,"agend_mkt":3.0,"agend_directs":3.0,"agend_seg":3.0,"agend_ind":0.0,"total_agend":22.0,"desqual":0.0,"conv":8.7},{"mes":"2026-04","mes_label":"Abr/2026","nome":"Enzo","dias":19,"abordados":644.0,"agend_abordados":18.0,"agend_mkt":1.0,"agend_directs":5.0,"agend_seg":2.0,"agend_ind":0.0,"total_agend":26.0,"desqual":0.0,"conv":4.0},{"mes":"2026-05","mes_label":"Mai/2026","nome":"Enzo","dias":1,"abordados":65.0,"agend_abordados":2.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":0.0,"agend_ind":0.0,"total_agend":2.0,"desqual":0.0,"conv":3.1},{"mes":"2025-08","mes_label":"Ago/2025","nome":"Iuri","dias":10,"abordados":203.0,"agend_abordados":0.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":0.0,"agend_ind":0.0,"total_agend":0.0,"desqual":0.0,"conv":0.0},{"mes":"2024-10","mes_label":"Out/2024","nome":"Jadna","dias":17,"abordados":441.0,"agend_abordados":12.0,"agend_mkt":2.0,"agend_directs":0.0,"agend_seg":0.0,"agend_ind":0.0,"total_agend":14.0,"desqual":0.0,"conv":3.2},{"mes":"2026-01","mes_label":"Jan/2026","nome":"Stella","dias":7,"abordados":236.0,"agend_abordados":2.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":3.0,"agend_ind":0.0,"total_agend":5.0,"desqual":0.0,"conv":2.1},{"mes":"2026-02","mes_label":"Fev/2026","nome":"Stella","dias":27,"abordados":165.0,"agend_abordados":4.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":7.0,"agend_ind":0.0,"total_agend":11.0,"desqual":0.0,"conv":6.7},{"mes":"2026-03","mes_label":"Mar/2026","nome":"Stella","dias":46,"abordados":262.0,"agend_abordados":3.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":12.0,"agend_ind":0.0,"total_agend":15.0,"desqual":0.0,"conv":5.7},{"mes":"2026-04","mes_label":"Abr/2026","nome":"Stella","dias":45,"abordados":736.0,"agend_abordados":10.0,"agend_mkt":2.0,"agend_directs":1.0,"agend_seg":10.0,"agend_ind":0.0,"total_agend":23.0,"desqual":0.0,"conv":3.1},{"mes":"2026-05","mes_label":"Mai/2026","nome":"Stella","dias":1,"abordados":17.0,"agend_abordados":0.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":0.0,"agend_ind":0.0,"total_agend":0.0,"desqual":0.0,"conv":0.0},{"mes":"2024-10","mes_label":"Out/2024","nome":"Victor","dias":36,"abordados":831.0,"agend_abordados":29.0,"agend_mkt":5.0,"agend_directs":0.0,"agend_seg":0.0,"agend_ind":0.0,"total_agend":34.0,"desqual":0.0,"conv":4.1},{"mes":"2024-11","mes_label":"Nov/2024","nome":"Victor","dias":36,"abordados":529.0,"agend_abordados":21.0,"agend_mkt":11.0,"agend_directs":1.0,"agend_seg":16.0,"agend_ind":0.0,"total_agend":52.0,"desqual":0.0,"conv":9.8},{"mes":"2024-12","mes_label":"Dez/2024","nome":"Victor","dias":28,"abordados":235.0,"agend_abordados":22.0,"agend_mkt":8.0,"agend_directs":1.0,"agend_seg":21.0,"agend_ind":0.0,"total_agend":60.0,"desqual":0.0,"conv":25.5},{"mes":"2025-01","mes_label":"Jan/2025","nome":"Victor","dias":38,"abordados":246.0,"agend_abordados":19.0,"agend_mkt":33.0,"agend_directs":5.0,"agend_seg":19.0,"agend_ind":0.0,"total_agend":79.0,"desqual":0.0,"conv":32.1},{"mes":"2025-02","mes_label":"Fev/2025","nome":"Victor","dias":32,"abordados":224.0,"agend_abordados":19.0,"agend_mkt":20.0,"agend_directs":3.0,"agend_seg":33.0,"agend_ind":0.0,"total_agend":78.0,"desqual":0.0,"conv":34.8},{"mes":"2025-03","mes_label":"Mar/2025","nome":"Victor","dias":27,"abordados":182.0,"agend_abordados":14.0,"agend_mkt":19.0,"agend_directs":4.0,"agend_seg":16.0,"agend_ind":0.0,"total_agend":54.0,"desqual":0.0,"conv":29.7},{"mes":"2025-04","mes_label":"Abr/2025","nome":"Victor","dias":29,"abordados":196.0,"agend_abordados":17.0,"agend_mkt":36.0,"agend_directs":1.0,"agend_seg":27.0,"agend_ind":0.0,"total_agend":89.0,"desqual":0.0,"conv":45.4},{"mes":"2025-05","mes_label":"Mai/2025","nome":"Victor","dias":36,"abordados":294.0,"agend_abordados":19.0,"agend_mkt":34.0,"agend_directs":1.0,"agend_seg":37.0,"agend_ind":0.0,"total_agend":97.0,"desqual":0.0,"conv":33.0},{"mes":"2025-06","mes_label":"Jun/2025","nome":"Victor","dias":48,"abordados":313.0,"agend_abordados":23.0,"agend_mkt":22.0,"agend_directs":3.0,"agend_seg":35.0,"agend_ind":0.0,"total_agend":85.0,"desqual":0.0,"conv":27.2},{"mes":"2025-07","mes_label":"Jul/2025","nome":"Victor","dias":41,"abordados":440.0,"agend_abordados":52.0,"agend_mkt":14.0,"agend_directs":3.0,"agend_seg":22.0,"agend_ind":0.0,"total_agend":93.0,"desqual":0.0,"conv":21.1},{"mes":"2025-08","mes_label":"Ago/2025","nome":"Victor","dias":24,"abordados":317.0,"agend_abordados":44.0,"agend_mkt":4.0,"agend_directs":0.0,"agend_seg":29.0,"agend_ind":0.0,"total_agend":82.0,"desqual":0.0,"conv":25.9},{"mes":"2025-09","mes_label":"Set/2025","nome":"Victor","dias":45,"abordados":497.0,"agend_abordados":53.0,"agend_mkt":11.0,"agend_directs":1.0,"agend_seg":27.0,"agend_ind":0.0,"total_agend":95.0,"desqual":0.0,"conv":19.1},{"mes":"2025-10","mes_label":"Out/2025","nome":"Victor","dias":25,"abordados":420.0,"agend_abordados":62.0,"agend_mkt":3.0,"agend_directs":1.0,"agend_seg":13.0,"agend_ind":0.0,"total_agend":79.0,"desqual":0.0,"conv":18.8},{"mes":"2025-11","mes_label":"Nov/2025","nome":"Victor","dias":29,"abordados":416.0,"agend_abordados":39.0,"agend_mkt":5.0,"agend_directs":5.0,"agend_seg":24.0,"agend_ind":0.0,"total_agend":77.0,"desqual":0.0,"conv":18.5},{"mes":"2025-12","mes_label":"Dez/2025","nome":"Victor","dias":19,"abordados":275.0,"agend_abordados":30.0,"agend_mkt":0.0,"agend_directs":1.0,"agend_seg":11.0,"agend_ind":0.0,"total_agend":45.0,"desqual":0.0,"conv":16.4},{"mes":"2026-01","mes_label":"Jan/2026","nome":"Victor","dias":19,"abordados":228.0,"agend_abordados":30.0,"agend_mkt":15.0,"agend_directs":2.0,"agend_seg":25.0,"agend_ind":0.0,"total_agend":75.0,"desqual":0.0,"conv":32.9},{"mes":"2026-02","mes_label":"Fev/2026","nome":"Victor","dias":29,"abordados":400.0,"agend_abordados":72.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":37.0,"agend_ind":0.0,"total_agend":110.0,"desqual":0.0,"conv":27.5},{"mes":"2026-03","mes_label":"Mar/2026","nome":"Victor","dias":23,"abordados":483.0,"agend_abordados":63.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":28.0,"agend_ind":0.0,"total_agend":91.0,"desqual":0.0,"conv":18.8},{"mes":"2025-06","mes_label":"Jun/2025","nome":"Viviane","dias":8,"abordados":57.0,"agend_abordados":1.0,"agend_mkt":0.0,"agend_directs":0.0,"agend_seg":2.0,"agend_ind":0.0,"total_agend":3.0,"desqual":0.0,"conv":5.3},{"mes":"2025-07","mes_label":"Jul/2025","nome":"Viviane","dias":44,"abordados":211.0,"agend_abordados":4.0,"agend_mkt":0.0,"agend_directs":2.0,"agend_seg":5.0,"agend_ind":0.0,"total_agend":11.0,"desqual":0.0,"conv":5.2},{"mes":"2025-08","mes_label":"Ago/2025","nome":"Viviane","dias":33,"abordados":306.0,"agend_abordados":12.0,"agend_mkt":0.0,"agend_directs":2.0,"agend_seg":2.0,"agend_ind":0.0,"total_agend":16.0,"desqual":0.0,"conv":5.2},{"mes":"2025-09","mes_label":"Set/2025","nome":"Viviane","dias":38,"abordados":308.0,"agend_abordados":10.0,"agend_mkt":2.0,"agend_directs":5.0,"agend_seg":9.0,"agend_ind":0.0,"total_agend":26.0,"desqual":0.0,"conv":8.4},{"mes":"2025-10","mes_label":"Out/2025","nome":"Viviane","dias":26,"abordados":450.0,"agend_abordados":7.0,"agend_mkt":0.0,"agend_directs":1.0,"agend_seg":7.0,"agend_ind":0.0,"total_agend":15.0,"desqual":0.0,"conv":3.3},{"mes":"2025-11","mes_label":"Nov/2025","nome":"Viviane","dias":13,"abordados":343.0,"agend_abordados":1.0,"agend_mkt":0.0,"agend_directs":1.0,"agend_seg":2.0,"agend_ind":0.0,"total_agend":5.0,"desqual":0.0,"conv":1.5}],
+  sdrs: [{"mes":"2025-07","mes_label":"Jul/2025","nome":"Alexandre","dias":1,"agend":1.0,"leads_inv":0.0,"leads_desq":2.0,"leads_nov_aq":5.0,"resp_aq":4.0,"resp_aplic":0.0,"agend_aplic":0.0,"leads_aplic":0.0,"conv_aq":80.0},{"mes":"2025-08","mes_label":"Ago/2025","nome":"Alexandre","dias":3,"agend":3.0,"leads_inv":0.0,"leads_desq":1.0,"leads_nov_aq":10.0,"resp_aq":6.0,"resp_aplic":10.0,"agend_aplic":4.0,"leads_aplic":0.0,"conv_aq":60.0},{"mes":"2025-09","mes_label":"Set/2025","nome":"Alexandre","dias":5,"agend":4.0,"leads_inv":0.0,"leads_desq":1.0,"leads_nov_aq":19.0,"resp_aq":13.0,"resp_aplic":21.0,"agend_aplic":3.0,"leads_aplic":0.0,"conv_aq":68.4},{"mes":"2025-10","mes_label":"Out/2025","nome":"Alexandre","dias":5,"agend":3.0,"leads_inv":0.0,"leads_desq":1.0,"leads_nov_aq":21.0,"resp_aq":11.0,"resp_aplic":30.0,"agend_aplic":4.0,"leads_aplic":0.0,"conv_aq":52.4},{"mes":"2025-11","mes_label":"Nov/2025","nome":"Alexandre","dias":5,"agend":5.0,"leads_inv":0.0,"leads_desq":1.0,"leads_nov_aq":35.0,"resp_aq":23.0,"resp_aplic":37.0,"agend_aplic":5.0,"leads_aplic":0.0,"conv_aq":65.7},{"mes":"2025-12","mes_label":"Dez/2025","nome":"Alexandre","dias":5,"agend":3.0,"leads_inv":0.0,"leads_desq":1.0,"leads_nov_aq":28.0,"resp_aq":16.0,"resp_aplic":32.0,"agend_aplic":4.0,"leads_aplic":0.0,"conv_aq":57.1},{"mes":"2026-01","mes_label":"Jan/2026","nome":"Alexandre","dias":5,"agend":4.0,"leads_inv":0.0,"leads_desq":1.0,"leads_nov_aq":40.0,"resp_aq":23.0,"resp_aplic":40.0,"agend_aplic":7.0,"leads_aplic":0.0,"conv_aq":57.5},{"mes":"2026-02","mes_label":"Fev/2026","nome":"Alexandre","dias":5,"agend":3.0,"leads_inv":1.0,"leads_desq":2.0,"leads_nov_aq":30.0,"resp_aq":18.0,"resp_aplic":50.0,"agend_aplic":6.0,"leads_aplic":0.0,"conv_aq":60.0},{"mes":"2026-03","mes_label":"Mar/2026","nome":"Alexandre","dias":5,"agend":2.0,"leads_inv":0.0,"leads_desq":0.0,"leads_nov_aq":26.0,"resp_aq":14.0,"resp_aplic":38.0,"agend_aplic":4.0,"leads_aplic":0.0,"conv_aq":53.8},{"mes":"2025-10","mes_label":"Out/2025","nome":"Alisson","dias":25,"agend":17.0,"leads_inv":14.0,"leads_desq":19.0,"leads_nov_aq":130.0,"resp_aq":56.0,"resp_aplic":109.0,"agend_aplic":38.0,"leads_aplic":0.0,"conv_aq":43.1},{"mes":"2025-11","mes_label":"Nov/2025","nome":"Alisson","dias":22,"agend":17.0,"leads_inv":19.0,"leads_desq":22.0,"leads_nov_aq":199.0,"resp_aq":68.0,"resp_aplic":148.0,"agend_aplic":41.0,"leads_aplic":0.0,"conv_aq":34.2},{"mes":"2025-12","mes_label":"Dez/2025","nome":"Alisson","dias":18,"agend":8.0,"leads_inv":14.0,"leads_desq":13.0,"leads_nov_aq":131.0,"resp_aq":43.0,"resp_aplic":133.0,"agend_aplic":27.0,"leads_aplic":0.0,"conv_aq":32.8},{"mes":"2026-01","mes_label":"Jan/2026","nome":"Alisson","dias":22,"agend":16.0,"leads_inv":10.0,"leads_desq":17.0,"leads_nov_aq":212.0,"resp_aq":68.0,"resp_aplic":237.0,"agend_aplic":56.0,"leads_aplic":0.0,"conv_aq":32.1},{"mes":"2026-02","mes_label":"Fev/2026","nome":"Alisson","dias":21,"agend":17.0,"leads_inv":11.0,"leads_desq":17.0,"leads_nov_aq":200.0,"resp_aq":68.0,"resp_aplic":180.0,"agend_aplic":44.0,"leads_aplic":0.0,"conv_aq":34.0},{"mes":"2026-03","mes_label":"Mar/2026","nome":"Alisson","dias":22,"agend":12.0,"leads_inv":13.0,"leads_desq":21.0,"leads_nov_aq":199.0,"resp_aq":57.0,"resp_aplic":201.0,"agend_aplic":47.0,"leads_aplic":0.0,"conv_aq":28.6},{"mes":"2026-04","mes_label":"Abr/2026","nome":"Alisson","dias":22,"agend":13.0,"leads_inv":14.0,"leads_desq":21.0,"leads_nov_aq":203.0,"resp_aq":68.0,"resp_aplic":190.0,"agend_aplic":50.0,"leads_aplic":0.0,"conv_aq":33.5},{"mes":"2026-05","mes_label":"Mai/2026","nome":"Alisson","dias":5,"agend":2.0,"leads_inv":4.0,"leads_desq":5.0,"leads_nov_aq":55.0,"resp_aq":13.0,"resp_aplic":40.0,"agend_aplic":14.0,"leads_aplic":0.0,"conv_aq":23.6},{"mes":"2025-12","mes_label":"Dez/2025","nome":"Felipe","dias":9,"agend":3.0,"leads_inv":3.0,"leads_desq":3.0,"leads_nov_aq":78.0,"resp_aq":14.0,"resp_aplic":39.0,"agend_aplic":11.0,"leads_aplic":0.0,"conv_aq":17.9},{"mes":"2026-01","mes_label":"Jan/2026","nome":"Felipe","dias":22,"agend":21.0,"leads_inv":9.0,"leads_desq":9.0,"leads_nov_aq":230.0,"resp_aq":41.0,"resp_aplic":75.0,"agend_aplic":33.0,"leads_aplic":0.0,"conv_aq":17.8},{"mes":"2026-02","mes_label":"Fev/2026","nome":"Felipe","dias":22,"agend":23.0,"leads_inv":7.0,"leads_desq":7.0,"leads_nov_aq":239.0,"resp_aq":46.0,"resp_aplic":68.0,"agend_aplic":32.0,"leads_aplic":0.0,"conv_aq":19.2},{"mes":"2026-03","mes_label":"Mar/2026","nome":"Felipe","dias":22,"agend":27.0,"leads_inv":8.0,"leads_desq":8.0,"leads_nov_aq":255.0,"resp_aq":50.0,"resp_aplic":80.0,"agend_aplic":34.0,"leads_aplic":0.0,"conv_aq":19.6},{"mes":"2026-04","mes_label":"Abr/2026","nome":"Felipe","dias":22,"agend":25.0,"leads_inv":7.0,"leads_desq":7.0,"leads_nov_aq":248.0,"resp_aq":49.0,"resp_aplic":78.0,"agend_aplic":30.0,"leads_aplic":0.0,"conv_aq":19.8},{"mes":"2026-05","mes_label":"Mai/2026","nome":"Felipe","dias":5,"agend":5.0,"leads_inv":2.0,"leads_desq":2.0,"leads_nov_aq":60.0,"resp_aq":13.0,"resp_aplic":18.0,"agend_aplic":8.0,"leads_aplic":0.0,"conv_aq":21.7}],
+  sf: [{"mes":"2025-04","mes_label":"Abr/2025","nome":"Alexandre","dias":3,"disparos":534.0,"respostas":30.0,"agend":2.0,"taxa_resp":5.6,"taxa_agend":0.37},{"mes":"2025-05","mes_label":"Mai/2025","nome":"Alexandre","dias":5,"disparos":534.0,"respostas":31.0,"agend":3.0,"taxa_resp":5.8,"taxa_agend":0.56},{"mes":"2025-06","mes_label":"Jun/2025","nome":"Alexandre","dias":5,"disparos":534.0,"respostas":35.0,"agend":4.0,"taxa_resp":6.6,"taxa_agend":0.75},{"mes":"2025-07","mes_label":"Jul/2025","nome":"Alexandre","dias":5,"disparos":534.0,"respostas":40.0,"agend":4.0,"taxa_resp":7.5,"taxa_agend":0.75},{"mes":"2025-08","mes_label":"Ago/2025","nome":"Alexandre","dias":5,"disparos":534.0,"respostas":42.0,"agend":2.0,"taxa_resp":7.9,"taxa_agend":0.37},{"mes":"2025-09","mes_label":"Set/2025","nome":"Alexandre","dias":5,"disparos":534.0,"respostas":40.0,"agend":2.0,"taxa_resp":7.5,"taxa_agend":0.37}],
+  follow_up: [{"mes":"2025-01","mes_label":"Jan/2025","dias":6,"novos_leads":8.0,"respostas":23.0,"agend":5.0,"comparecimentos":5.0,"no_show":0.0,"vendas":0.0,"taxa_comp":100.0,"taxa_venda":0.0},{"mes":"2025-02","mes_label":"Fev/2025","dias":9,"novos_leads":16.0,"respostas":42.0,"agend":8.0,"comparecimentos":7.0,"no_show":1.0,"vendas":1.0,"taxa_comp":87.5,"taxa_venda":14.3},{"mes":"2025-03","mes_label":"Mar/2025","dias":12,"novos_leads":19.0,"respostas":52.0,"agend":10.0,"comparecimentos":9.0,"no_show":1.0,"vendas":2.0,"taxa_comp":90.0,"taxa_venda":22.2},{"mes":"2025-04","mes_label":"Abr/2025","dias":11,"novos_leads":22.0,"respostas":67.0,"agend":12.0,"comparecimentos":11.0,"no_show":1.0,"vendas":2.0,"taxa_comp":91.7,"taxa_venda":18.2},{"mes":"2025-05","mes_label":"Mai/2025","dias":14,"novos_leads":32.0,"respostas":88.0,"agend":18.0,"comparecimentos":14.0,"no_show":4.0,"vendas":3.0,"taxa_comp":77.8,"taxa_venda":21.4},{"mes":"2025-06","mes_label":"Jun/2025","dias":14,"novos_leads":28.0,"respostas":77.0,"agend":15.0,"comparecimentos":12.0,"no_show":3.0,"vendas":2.0,"taxa_comp":80.0,"taxa_venda":16.7}]
+};
+
+// ============================================================
+// CHARTS REGISTRY
+// ============================================================
+const charts = {};
+function makeChart(id, config) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, config);
+}
+
+const COLORS = ['#4f7cff','#3ecf8e','#f5a623','#e85d75','#36c5c5','#a78bfa','#fb923c','#34d399'];
+const gridColor = 'rgba(255,255,255,0.05)';
+const tickColor = '#555b6e';
+const baseFont = { family: "'DM Sans', sans-serif", size: 11 };
+
+function baseOptions(extras = {}) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2030', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleFont: baseFont, bodyFont: baseFont, padding: 10 } },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: tickColor, font: baseFont, maxRotation: 45 } },
+      y: { grid: { color: gridColor }, ticks: { color: tickColor, font: baseFont } }
+    },
+    ...extras
+  };
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function n(v) { return Math.round(v || 0); }
+function pct(v) { return (v || 0).toFixed(1) + '%'; }
+function sum(arr, k) { return arr.reduce((a, r) => a + (r[k] || 0), 0); }
+function avg(arr, k) { return arr.length ? sum(arr, k) / arr.length : 0; }
+function uniqueSorted(arr, k) { return [...new Set(arr.map(r => r[k]).filter(Boolean))].sort(); }
+
+function convBadge(v) {
+  const cls = v >= 15 ? 'green' : v >= 5 ? 'amber' : 'red';
+  return `<span class="badge ${cls}">${pct(v)}</span>`;
+}
+
+function badge(v, thresholds, unit = '') {
+  const [hi, lo] = thresholds;
+  const cls = v >= hi ? 'green' : v >= lo ? 'amber' : 'red';
+  return `<span class="badge ${cls}">${n(v)}${unit}</span>`;
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  const idx = ['overview','ss','sdr','sf','closer'].indexOf(name);
+  document.querySelectorAll('.nav-item')[idx].classList.add('active');
+
+  if (name === 'overview') renderOverview();
+  if (name === 'ss') renderSS();
+  if (name === 'sdr') renderSDR();
+  if (name === 'sf') renderSF();
+  if (name === 'closer') renderCloser();
+}
+
+// ============================================================
+// OVERVIEW
+// ============================================================
+function renderOverview() {
+  const ss = RAW.social_selling;
+  const sdr = RAW.sdrs;
+  const fu = RAW.follow_up;
+
+  const totalAgendSS = n(sum(ss, 'total_agend'));
+  const totalAgendSDR = n(sum(sdr, 'agend'));
+  const totalVendas = n(sum(fu, 'vendas'));
+  const totalComp = n(sum(fu, 'comparecimentos'));
+  const avgConvSS = (sum(ss,'conv') / ss.filter(r=>r.abordados>0).length).toFixed(1);
+
+  document.getElementById('kpi-overview').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Agend. Social Sellers</div><div class="kpi-value">${totalAgendSS}</div><div class="kpi-sub">total histórico</div></div>
+    <div class="kpi"><div class="kpi-label">Agend. SDRs</div><div class="kpi-value">${totalAgendSDR}</div><div class="kpi-sub">total histórico</div></div>
+    <div class="kpi"><div class="kpi-label">Comparecimentos</div><div class="kpi-value">${totalComp}</div><div class="kpi-sub">Follow Up — Maíra</div></div>
+    <div class="kpi"><div class="kpi-label">Vendas registradas</div><div class="kpi-value">${totalVendas}</div><div class="kpi-sub">registradas no CRM</div></div>
+    <div class="kpi"><div class="kpi-label">Conv. média SS</div><div class="kpi-value">${avgConvSS}<span>%</span></div><div class="kpi-sub">por abordado</div></div>
+  `;
+
+  // Chart: agendamentos por time por mês
+  const allMonths = [...new Set([...ss.map(r=>r.mes), ...sdr.map(r=>r.mes)])].filter(m => /^\d{4}-\d{2}$/.test(m)).sort();
+  const ssPerMonth = allMonths.map(m => n(sum(ss.filter(r=>r.mes===m), 'total_agend')));
+  const sdrPerMonth = allMonths.map(m => n(sum(sdr.filter(r=>r.mes===m), 'agend')));
+  const labels = allMonths.map(m => {
+    const r = ss.find(x=>x.mes===m) || sdr.find(x=>x.mes===m);
+    return r ? r.mes_label : m;
+  });
+
+  makeChart('chart-overview-agend', {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Social Selling', data: ssPerMonth, backgroundColor: '#4f7cff', borderRadius: 4 },
+        { label: 'SDRs', data: sdrPerMonth, backgroundColor: '#3ecf8e', borderRadius: 4 }
+      ]
+    },
+    options: { ...baseOptions(), plugins: { ...baseOptions().plugins, legend: { display: true, labels: { color: '#8b90a0', font: baseFont, boxWidth: 10, boxHeight: 10 } } }, scales: { ...baseOptions().scales, x: { ...baseOptions().scales.x, stacked: false }, y: { ...baseOptions().scales.y, stacked: false } } }
+  });
+
+  // Ranking
+  const sellers = uniqueSorted(ss, 'nome');
+  const ranking = sellers.map(nome => ({
+    nome,
+    total: n(sum(ss.filter(r=>r.nome===nome), 'total_agend')),
+    conv: avg(ss.filter(r=>r.nome===nome && r.abordados>0), 'conv').toFixed(1)
+  })).sort((a,b) => b.total - a.total);
+  const maxT = ranking[0]?.total || 1;
+
+  document.getElementById('ranking-agend').innerHTML = ranking.map((r, i) => `
+    <div class="rank-item">
+      <div class="rank-pos">${i+1}</div>
+      <div class="rank-name">${r.nome}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${Math.round(r.total/maxT*100)}%;background:${COLORS[i%COLORS.length]};"></div></div>
+      <div class="rank-val">${r.total}</div>
+      <div class="rank-sub">${r.conv}%</div>
+    </div>
+  `).join('');
+
+  // Alerts
+  document.getElementById('alerts-overview').innerHTML = `
+    <div class="alert success">🏆 Victor lidera com 1.325 agendamentos históricos e conversão média de ~22%. Referência de método para o time.</div>
+    <div class="alert danger">🚨 Iuri: 203 abordagens, 0 agendamentos. Retreinamento ou desligamento urgente.</div>
+    <div class="alert danger">🚨 Andrezza: 407 abordagens, 5 agendamentos (1,2% de conv.). Script completamente fora do ICP.</div>
+    <div class="alert warn">⚠ Enzo e Stella: em abr/2026 triplicaram volume e conversão despencou para ~3-4%. Problema sistêmico de qualidade vs quantidade.</div>
+  `;
+}
+
+// ============================================================
+// SOCIAL SELLING
+// ============================================================
+function initSSFilters() {
+  const pessoas = uniqueSorted(RAW.social_selling, 'nome');
+  const meses = RAW.social_selling.filter(r=>/^\d{4}-\d{2}$/.test(r.mes)).map(r=>({mes:r.mes,label:r.mes_label}));
+  const uniqMeses = [...new Map(meses.map(m=>[m.mes,m])).values()].sort((a,b)=>a.mes.localeCompare(b.mes));
+
+  const selP = document.getElementById('ss-pessoa');
+  pessoas.forEach(p => { const o = new Option(p,p); selP.add(o); });
+  const selM = document.getElementById('ss-mes');
+  uniqMeses.forEach(m => { const o = new Option(m.label, m.mes); selM.add(o); });
+}
+
+function renderSS() {
+  const pessoa = document.getElementById('ss-pessoa')?.value || '';
+  const mes = document.getElementById('ss-mes')?.value || '';
+
+  let data = RAW.social_selling.filter(r => /^\d{4}-\d{2}$/.test(r.mes));
+  if (pessoa) data = data.filter(r => r.nome === pessoa);
+  if (mes) data = data.filter(r => r.mes === mes);
+
+  const totalAgend = n(sum(data, 'total_agend'));
+  const totalAbord = n(sum(data, 'abordados'));
+  const avgConv = data.filter(r=>r.abordados>0).length ? (sum(data,'conv')/data.filter(r=>r.abordados>0).length).toFixed(1) : '0.0';
+  const totalDias = n(sum(data, 'dias'));
+
+  document.getElementById('kpi-ss').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Total abordados</div><div class="kpi-value">${totalAbord.toLocaleString('pt-BR')}</div></div>
+    <div class="kpi"><div class="kpi-label">Total agend.</div><div class="kpi-value">${totalAgend}</div></div>
+    <div class="kpi"><div class="kpi-label">Conv. média</div><div class="kpi-value">${avgConv}<span>%</span></div></div>
+    <div class="kpi"><div class="kpi-label">Dias ativos</div><div class="kpi-value">${totalDias}</div></div>
+    <div class="kpi"><div class="kpi-label">Agend/dia</div><div class="kpi-value">${totalDias ? (totalAgend/totalDias).toFixed(1) : '0'}</div></div>
+  `;
+
+  // Aggregate by month
+  const meses = [...new Set(data.map(r=>r.mes))].sort();
+  const labels = meses.map(m => data.find(r=>r.mes===m)?.mes_label || m);
+  const agendM = meses.map(m => n(sum(data.filter(r=>r.mes===m),'total_agend')));
+  const convM = meses.map(m => {
+    const d = data.filter(r=>r.mes===m && r.abordados>0);
+    return d.length ? parseFloat((sum(d,'conv')/d.length).toFixed(1)) : 0;
+  });
+  const abordM = meses.map(m => n(sum(data.filter(r=>r.mes===m),'abordados')));
+
+  makeChart('chart-ss-agend', { type:'bar', data:{ labels, datasets:[{ data:agendM, backgroundColor:'#4f7cff', borderRadius:4 }] }, options: baseOptions() });
+  makeChart('chart-ss-conv', { type:'line', data:{ labels, datasets:[{ data:convM, borderColor:'#3ecf8e', backgroundColor:'rgba(62,207,142,0.1)', fill:true, tension:0.4, pointRadius:3 }] }, options: baseOptions() });
+  makeChart('chart-ss-abord', { type:'bar', data:{ labels, datasets:[{ data:abordM, backgroundColor:'rgba(79,124,255,0.4)', borderRadius:4 }] }, options: baseOptions() });
+
+  // Canais
+  const cAbord = n(sum(data,'agend_abordados'));
+  const cMkt = n(sum(data,'agend_mkt'));
+  const cDir = n(sum(data,'agend_directs'));
+  const cSeg = n(sum(data,'agend_seg'));
+  const cInd = n(sum(data,'agend_ind'));
+  makeChart('chart-ss-canais', {
+    type: 'doughnut',
+    data: { labels:['Abordados','Marketing','Directs','Seguidores','Indicações'], datasets:[{ data:[cAbord,cMkt,cDir,cSeg,cInd], backgroundColor:['#4f7cff','#3ecf8e','#f5a623','#36c5c5','#a78bfa'], borderWidth:0 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:true, position:'right', labels:{ color:'#8b90a0', font:baseFont, boxWidth:10 } }, tooltip:{ backgroundColor:'#1c2030', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 } } }
+  });
+
+  // Table
+  const rows = [...data].sort((a,b) => a.mes.localeCompare(b.mes) || a.nome.localeCompare(b.nome));
+  document.getElementById('tbody-ss').innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.mes_label}</td><td>${r.nome}</td><td>${n(r.dias)}</td>
+      <td>${n(r.abordados).toLocaleString('pt-BR')}</td>
+      <td>${n(r.agend_abordados)}</td><td>${n(r.agend_mkt)}</td><td>${n(r.agend_seg)}</td>
+      <td><strong>${n(r.total_agend)}</strong></td><td>${convBadge(r.conv)}</td>
+    </tr>`).join('');
+
+  document.getElementById('tfoot-ss').innerHTML = `<tr>
+    <td colspan="3">Total</td>
+    <td>${totalAbord.toLocaleString('pt-BR')}</td>
+    <td>${n(sum(data,'agend_abordados'))}</td>
+    <td>${n(sum(data,'agend_mkt'))}</td>
+    <td>${n(sum(data,'agend_seg'))}</td>
+    <td>${totalAgend}</td>
+    <td>${avgConv}%</td>
+  </tr>`;
+}
+
+// ============================================================
+// SDRs
+// ============================================================
+function initSDRFilters() {
+  const pessoas = uniqueSorted(RAW.sdrs, 'nome');
+  const meses = RAW.sdrs.filter(r=>/^\d{4}-\d{2}$/.test(r.mes)).map(r=>({mes:r.mes,label:r.mes_label}));
+  const uniqMeses = [...new Map(meses.map(m=>[m.mes,m])).values()].sort((a,b)=>a.mes.localeCompare(b.mes));
+
+  const selP = document.getElementById('sdr-pessoa');
+  pessoas.forEach(p => selP.add(new Option(p,p)));
+  const selM = document.getElementById('sdr-mes');
+  uniqMeses.forEach(m => selM.add(new Option(m.label,m.mes)));
+}
+
+function renderSDR() {
+  const pessoa = document.getElementById('sdr-pessoa')?.value || '';
+  const mes = document.getElementById('sdr-mes')?.value || '';
+
+  let data = RAW.sdrs.filter(r => /^\d{4}-\d{2}$/.test(r.mes));
+  if (pessoa) data = data.filter(r => r.nome === pessoa);
+  if (mes) data = data.filter(r => r.mes === mes);
+
+  const totalAgend = n(sum(data,'agend'));
+  const totalLeads = n(sum(data,'leads_nov_aq'));
+  const totalResp = n(sum(data,'resp_aq'));
+  const totalAplic = n(sum(data,'agend_aplic'));
+  const convGlobal = totalLeads ? (totalResp/totalLeads*100).toFixed(1) : '0';
+
+  document.getElementById('kpi-sdr').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Agendamentos</div><div class="kpi-value">${totalAgend}</div></div>
+    <div class="kpi"><div class="kpi-label">Leads aquisição</div><div class="kpi-value">${totalLeads.toLocaleString('pt-BR')}</div></div>
+    <div class="kpi"><div class="kpi-label">Respostas</div><div class="kpi-value">${totalResp.toLocaleString('pt-BR')}</div></div>
+    <div class="kpi"><div class="kpi-label">Conv. resp.</div><div class="kpi-value">${convGlobal}<span>%</span></div></div>
+    <div class="kpi"><div class="kpi-label">Agend. aplicação</div><div class="kpi-value">${totalAplic}</div></div>
+  `;
+
+  const meses = [...new Set(data.map(r=>r.mes))].sort();
+  const labels = meses.map(m => data.find(r=>r.mes===m)?.mes_label || m);
+  const agendM = meses.map(m => n(sum(data.filter(r=>r.mes===m),'agend')));
+  const convM = meses.map(m => {
+    const d = data.filter(r=>r.mes===m);
+    const l = sum(d,'leads_nov_aq'); const r2 = sum(d,'resp_aq');
+    return l ? parseFloat((r2/l*100).toFixed(1)) : 0;
+  });
+
+  makeChart('chart-sdr-agend', { type:'bar', data:{ labels, datasets:[{ data:agendM, backgroundColor:'#3ecf8e', borderRadius:4 }] }, options: baseOptions() });
+  makeChart('chart-sdr-conv', { type:'line', data:{ labels, datasets:[{ data:convM, borderColor:'#f5a623', backgroundColor:'rgba(245,166,35,0.1)', fill:true, tension:0.4, pointRadius:3 }] }, options: baseOptions() });
+
+  // Ranking
+  const pessoas = uniqueSorted(data, 'nome');
+  const rankData = pessoas.map(nome => {
+    const d = data.filter(r=>r.nome===nome);
+    return { nome, agend: n(sum(d,'agend')), conv: d.length ? (sum(d,'resp_aq')/Math.max(sum(d,'leads_nov_aq'),1)*100).toFixed(1) : '0' };
+  }).sort((a,b) => b.agend - a.agend);
+  const maxR = rankData[0]?.agend || 1;
+  document.getElementById('ranking-sdr').innerHTML = rankData.map((r,i) => `
+    <div class="rank-item">
+      <div class="rank-pos">${i+1}</div>
+      <div class="rank-name">${r.nome}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${Math.round(r.agend/maxR*100)}%;background:${COLORS[i%COLORS.length]};"></div></div>
+      <div class="rank-val">${r.agend}</div>
+      <div class="rank-sub">${r.conv}%</div>
+    </div>`).join('');
+
+  // Table
+  const rows = [...data].sort((a,b) => a.mes.localeCompare(b.mes) || a.nome.localeCompare(b.nome));
+  document.getElementById('tbody-sdr').innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.mes_label}</td><td>${r.nome}</td><td>${n(r.dias)}</td>
+      <td><strong>${n(r.agend)}</strong></td>
+      <td>${n(r.leads_nov_aq)}</td><td>${n(r.resp_aq)}</td>
+      <td>${convBadge(r.conv_aq)}</td>
+      <td>${n(r.leads_aplic)}</td><td>${n(r.agend_aplic)}</td>
+    </tr>`).join('');
+
+  document.getElementById('tfoot-sdr').innerHTML = `<tr>
+    <td colspan="3">Total</td>
+    <td>${totalAgend}</td><td>${totalLeads.toLocaleString('pt-BR')}</td><td>${totalResp.toLocaleString('pt-BR')}</td>
+    <td>${convGlobal}%</td><td>${n(sum(data,'leads_aplic'))}</td><td>${totalAplic}</td>
+  </tr>`;
+}
+
+// ============================================================
+// SF
+// ============================================================
+function initSFFilters() {
+  const pessoas = uniqueSorted(RAW.sf, 'nome');
+  const sel = document.getElementById('sf-pessoa');
+  pessoas.forEach(p => sel.add(new Option(p,p)));
+}
+
+function renderSF() {
+  const pessoa = document.getElementById('sf-pessoa')?.value || '';
+  let data = [...RAW.sf];
+  if (pessoa) data = data.filter(r => r.nome === pessoa);
+
+  const totalDisp = n(sum(data,'disparos'));
+  const totalResp = n(sum(data,'respostas'));
+  const totalAgend = n(sum(data,'agend'));
+  const txResp = totalDisp ? (totalResp/totalDisp*100).toFixed(1) : '0';
+  const txAgend = totalDisp ? (totalAgend/totalDisp*100).toFixed(2) : '0';
+
+  document.getElementById('kpi-sf').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Disparos</div><div class="kpi-value">${totalDisp.toLocaleString('pt-BR')}</div></div>
+    <div class="kpi"><div class="kpi-label">Respostas</div><div class="kpi-value">${totalResp}</div></div>
+    <div class="kpi"><div class="kpi-label">Taxa resposta</div><div class="kpi-value">${txResp}<span>%</span></div></div>
+    <div class="kpi"><div class="kpi-label">Agendamentos</div><div class="kpi-value">${totalAgend}</div></div>
+    <div class="kpi"><div class="kpi-label">Conv. agend.</div><div class="kpi-value">${txAgend}<span>%</span></div></div>
+  `;
+
+  const meses = [...new Set(data.map(r=>r.mes))].sort();
+  const labels = meses.map(m => data.find(r=>r.mes===m)?.mes_label || m);
+  const disp = meses.map(m => n(sum(data.filter(r=>r.mes===m),'disparos')));
+  const resp = meses.map(m => n(sum(data.filter(r=>r.mes===m),'respostas')));
+  const agend = meses.map(m => n(sum(data.filter(r=>r.mes===m),'agend')));
+
+  makeChart('chart-sf-disp', { type:'bar', data:{ labels, datasets:[
+    { label:'Disparos', data:disp, backgroundColor:'rgba(79,124,255,0.3)', borderRadius:4 },
+    { label:'Respostas', data:resp, backgroundColor:'#4f7cff', borderRadius:4 }
+  ]}, options: { ...baseOptions(), plugins:{ ...baseOptions().plugins, legend:{ display:true, labels:{ color:'#8b90a0', font:baseFont, boxWidth:10 } } } } });
+  makeChart('chart-sf-agend', { type:'bar', data:{ labels, datasets:[{ data:agend, backgroundColor:'#f5a623', borderRadius:4 }] }, options: baseOptions() });
+
+  document.getElementById('tbody-sf').innerHTML = data.sort((a,b)=>a.mes.localeCompare(b.mes)).map(r => `
+    <tr>
+      <td>${r.mes_label}</td><td>${r.nome}</td><td>${n(r.dias)}</td>
+      <td>${n(r.disparos)}</td><td>${n(r.respostas)}</td>
+      <td>${convBadge(r.taxa_resp)}</td>
+      <td>${n(r.agend)}</td><td><span class="badge ${r.taxa_agend >= 0.5 ? 'amber' : 'red'}">${r.taxa_agend}%</span></td>
+    </tr>`).join('');
+
+  document.getElementById('tfoot-sf').innerHTML = `<tr>
+    <td colspan="3">Total</td>
+    <td>${totalDisp.toLocaleString('pt-BR')}</td><td>${totalResp}</td>
+    <td>${txResp}%</td><td>${totalAgend}</td><td>${txAgend}%</td>
+  </tr>`;
+}
+
+// ============================================================
+// CLOSER
+// ============================================================
+function renderCloser() {
+  const data = RAW.follow_up;
+  const totalAgend = n(sum(data,'agend'));
+  const totalComp = n(sum(data,'comparecimentos'));
+  const totalNS = n(sum(data,'no_show'));
+  const totalVendas = n(sum(data,'vendas'));
+  const txComp = totalAgend ? (totalComp/totalAgend*100).toFixed(1) : '0';
+  const txVenda = totalComp ? (totalVendas/totalComp*100).toFixed(1) : '0';
+
+  document.getElementById('kpi-closer').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Agendamentos</div><div class="kpi-value">${totalAgend}</div></div>
+    <div class="kpi"><div class="kpi-label">Comparecimentos</div><div class="kpi-value">${totalComp}</div></div>
+    <div class="kpi"><div class="kpi-label">No-show</div><div class="kpi-value">${totalNS}</div></div>
+    <div class="kpi"><div class="kpi-label">Taxa compar.</div><div class="kpi-value">${txComp}<span>%</span></div></div>
+    <div class="kpi"><div class="kpi-label">Vendas</div><div class="kpi-value">${totalVendas}</div></div>
+    <div class="kpi"><div class="kpi-label">Conv. venda</div><div class="kpi-value">${txVenda}<span>%</span></div></div>
+  `;
+
+  const labels = data.map(r => r.mes_label);
+  makeChart('chart-closer-comp', { type:'bar', data:{ labels, datasets:[
+    { label:'Agend.', data:data.map(r=>n(r.agend)), backgroundColor:'rgba(79,124,255,0.3)', borderRadius:4 },
+    { label:'Comp.', data:data.map(r=>n(r.comparecimentos)), backgroundColor:'#4f7cff', borderRadius:4 }
+  ]}, options: { ...baseOptions(), plugins:{ ...baseOptions().plugins, legend:{ display:true, labels:{ color:'#8b90a0', font:baseFont, boxWidth:10 } } } } });
+  makeChart('chart-closer-vendas', { type:'bar', data:{ labels, datasets:[{ data:data.map(r=>n(r.vendas)), backgroundColor:'#3ecf8e', borderRadius:4 }] }, options: baseOptions() });
+
+  document.getElementById('tbody-closer').innerHTML = data.map(r => `
+    <tr>
+      <td>${r.mes_label}</td><td>${n(r.dias)}</td><td>${n(r.novos_leads)}</td>
+      <td>${n(r.agend)}</td><td>${n(r.comparecimentos)}</td><td>${n(r.no_show)}</td>
+      <td>${convBadge(r.taxa_comp)}</td>
+      <td><strong>${n(r.vendas)}</strong></td>
+      <td>${convBadge(r.taxa_venda)}</td>
+    </tr>`).join('');
+
+  document.getElementById('tfoot-closer').innerHTML = `<tr>
+    <td>Total</td><td>${n(sum(data,'dias'))}</td><td>${n(sum(data,'novos_leads'))}</td>
+    <td>${totalAgend}</td><td>${totalComp}</td><td>${totalNS}</td>
+    <td>${txComp}%</td><td>${totalVendas}</td><td>${txVenda}%</td>
+  </tr>`;
+}
+
+// ============================================================
+// SYNC (Google Sheets)
+// ============================================================
+// ============================================================
+// CSV PARSER
+// ============================================================
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g,'').trim());
+  return lines.slice(1).map(line => {
+    const vals = [];
+    let cur = '', inQ = false;
+    for (let c of line) {
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { vals.push(cur); cur = ''; }
+      else cur += c;
+    }
+    vals.push(cur);
+    const obj = {};
+    headers.forEach((h,i) => { obj[h] = (vals[i] || '').replace(/^"|"$/g,'').trim(); });
+    return obj;
+  });
+}
+
+function excelDateToJS(serial) {
+  const s = parseFloat(serial);
+  if (isNaN(s) || s < 40000 || s > 50000) return null;
+  return new Date((s - 25569) * 86400 * 1000);
+}
+
+function toMes(d) {
+  if (!d) return null;
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0');
+  return `${y}-${m}`;
+}
+
+function toMesLabel(d) {
+  if (!d) return '';
+  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  return `${months[d.getMonth()]}/${d.getFullYear()}`;
+}
+
+function nv(v) { const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+// ============================================================
+// SYNC
+// ============================================================
+async function syncSheets() {
+  const btn = document.querySelector('.sync-btn');
+  const status = document.querySelector('.sync-status');
+  const spinSVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`;
+  const idleSVG = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`;
+
+  btn.innerHTML = `${spinSVG}<span>Sincronizando...</span>`;
+  btn.disabled = true;
+
+  try {
+    // Fetch all 4 sheets in parallel
+    const [ssRes, sdrRes, sfRes, closerRes] = await Promise.all([
+      fetch(SHEET_URLS.ss),
+      fetch(SHEET_URLS.sdr),
+      fetch(SHEET_URLS.sf),
+      fetch(SHEET_URLS.closer),
+    ]);
+
+    if (!ssRes.ok || !sdrRes.ok || !sfRes.ok || !closerRes.ok) throw new Error('Fetch failed');
+
+    const [ssTxt, sdrTxt, sfTxt, closerTxt] = await Promise.all([
+      ssRes.text(), sdrRes.text(), sfRes.text(), closerRes.text()
+    ]);
+
+    // Parse Social Selling
+    const ssRaw = parseCSV(ssTxt);
+    RAW.social_selling = processSSData(ssRaw);
+
+    // Parse SDRs
+    const sdrRaw = parseCSV(sdrTxt);
+    RAW.sdrs = processSDRData(sdrRaw);
+
+    // Parse SF
+    const sfRaw = parseCSV(sfTxt);
+    RAW.sf = processSFData(sfRaw);
+
+    // Parse Follow Up / Closer
+    const closerRaw = parseCSV(closerTxt);
+    RAW.follow_up = processCloserData(closerRaw);
+
+    // Re-render current page
+    const activePage = document.querySelector('.page.active')?.id?.replace('page-','');
+    if (activePage) showPage(activePage);
+
+    // Repopulate filters
+    repopulateFilters();
+
+    const now = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+    status.innerHTML = `<span class="sync-dot" style="background:var(--green)"></span>Atualizado ${now}`;
+
+  } catch(e) {
+    console.error('Sync error:', e);
+    status.innerHTML = `<span class="sync-dot" style="background:var(--red)"></span>Erro: ${e.message}`;
+  }
+
+  btn.innerHTML = `${idleSVG}<span>Sincronizar</span>`;
+  btn.disabled = false;
+}
+
+// ============================================================
+// DATA PROCESSORS (CSV → same structure as RAW)
+// ============================================================
+function processSSData(rows) {
+  // Cols: timestamp, email, data_ref, nome, conta, abordados, agend_abordados,
+  //       leads_mkt, agend_mkt, directs, agend_directs, caixinhas, agend_caixinha,
+  //       seg_abordados, agend_seg, desqual, ind_cs, agend_ind_cs, ind_closer, agend_ind_closer
+  const grouped = {};
+  rows.forEach(r => {
+    const vals = Object.values(r);
+    const dateSerial = vals[2];
+    const nome = (vals[3] || '').trim();
+    if (!nome) return;
+    const d = excelDateToJS(dateSerial);
+    if (!d) return;
+    const mes = toMes(d);
+    if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return;
+    const key = `${mes}|${nome}`;
+    if (!grouped[key]) grouped[key] = { mes, mes_label: toMesLabel(d), nome, dias:0, abordados:0, agend_abordados:0, agend_mkt:0, agend_directs:0, agend_seg:0, agend_ind:0, total_agend:0, desqual:0 };
+    const g = grouped[key];
+    g.dias++;
+    g.abordados += nv(vals[5]);
+    g.agend_abordados += nv(vals[6]);
+    g.agend_mkt += nv(vals[8]);
+    g.agend_directs += nv(vals[10]);
+    g.agend_seg += nv(vals[14]);
+    g.agend_ind += nv(vals[17]) + nv(vals[19]);
+    g.desqual += nv(vals[15]);
+  });
+  return Object.values(grouped).map(g => {
+    g.total_agend = g.agend_abordados + g.agend_mkt + g.agend_directs + g.agend_seg + g.agend_ind;
+    g.conv = g.abordados > 0 ? parseFloat((g.total_agend / g.abordados * 100).toFixed(1)) : 0;
+    return g;
+  }).sort((a,b) => a.nome.localeCompare(b.nome) || a.mes.localeCompare(b.mes));
+}
+
+function processSDRData(rows) {
+  const grouped = {};
+  rows.forEach(r => {
+    const vals = Object.values(r);
+    const nome = (vals[2] || '').trim();
+    if (!nome) return;
+    const d = excelDateToJS(vals[1]);
+    if (!d) return;
+    const mes = toMes(d);
+    if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return;
+    const key = `${mes}|${nome}`;
+    if (!grouped[key]) grouped[key] = { mes, mes_label: toMesLabel(d), nome, dias:0, agend:0, leads_inv:0, leads_desq:0, leads_nov_aq:0, resp_aq:0, resp_aplic:0, agend_aplic:0, leads_aplic:0, conv_aq:0 };
+    const g = grouped[key];
+    g.dias++;
+    g.agend += nv(vals[3]);
+    g.leads_inv += nv(vals[4]);
+    g.leads_desq += nv(vals[5]);
+    g.leads_nov_aq += nv(vals[6]);
+    g.resp_aq += nv(vals[7]);
+    g.resp_aplic += nv(vals[11]);
+    g.agend_aplic += nv(vals[12]);
+    g.leads_aplic += nv(vals[16]);
+  });
+  return Object.values(grouped).map(g => {
+    g.conv_aq = g.leads_nov_aq > 0 ? parseFloat((g.resp_aq / g.leads_nov_aq * 100).toFixed(1)) : 0;
+    return g;
+  }).sort((a,b) => a.nome.localeCompare(b.nome) || a.mes.localeCompare(b.mes));
+}
+
+function processSFData(rows) {
+  const grouped = {};
+  rows.forEach(r => {
+    const vals = Object.values(r);
+    const nome = (vals[3] || '').trim();
+    if (!nome) return;
+    const d = excelDateToJS(vals[2]);
+    if (!d) return;
+    const mes = toMes(d);
+    if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return;
+    const key = `${mes}|${nome}`;
+    if (!grouped[key]) grouped[key] = { mes, mes_label: toMesLabel(d), nome, dias:0, disparos:0, respostas:0, agend:0, taxa_resp:0, taxa_agend:0 };
+    const g = grouped[key];
+    g.dias++;
+    g.disparos += nv(vals[4]);
+    g.respostas += nv(vals[5]);
+    g.agend += nv(vals[6]);
+  });
+  return Object.values(grouped).map(g => {
+    g.taxa_resp = g.disparos > 0 ? parseFloat((g.respostas/g.disparos*100).toFixed(1)) : 0;
+    g.taxa_agend = g.disparos > 0 ? parseFloat((g.agend/g.disparos*100).toFixed(2)) : 0;
+    return g;
+  }).sort((a,b) => a.nome.localeCompare(b.mes) || a.mes.localeCompare(b.mes));
+}
+
+function processCloserData(rows) {
+  const grouped = {};
+  rows.forEach(r => {
+    const vals = Object.values(r);
+    const d = excelDateToJS(vals[2]);
+    if (!d) return;
+    const mes = toMes(d);
+    if (!mes || !/^\d{4}-\d{2}$/.test(mes)) return;
+    if (!grouped[mes]) grouped[mes] = { mes, mes_label: toMesLabel(d), dias:0, novos_leads:0, respostas:0, agend:0, comparecimentos:0, no_show:0, vendas:0, taxa_comp:0, taxa_venda:0 };
+    const g = grouped[mes];
+    g.dias++;
+    g.novos_leads += nv(vals[4]);
+    g.respostas += nv(vals[6]);
+    g.agend += nv(vals[9]);
+    g.comparecimentos += nv(vals[10]);
+    g.no_show += nv(vals[11]);
+    g.vendas += nv(vals[12]);
+  });
+  return Object.values(grouped).map(g => {
+    g.taxa_comp = g.agend > 0 ? parseFloat((g.comparecimentos/g.agend*100).toFixed(1)) : 0;
+    g.taxa_venda = g.comparecimentos > 0 ? parseFloat((g.vendas/g.comparecimentos*100).toFixed(1)) : 0;
+    return g;
+  }).sort((a,b) => a.mes.localeCompare(b.mes));
+}
+
+function repopulateFilters() {
+  // SS
+  const ssPessoas = [...new Set(RAW.social_selling.map(r=>r.nome))].sort();
+  const ssMeses = [...new Set(RAW.social_selling.filter(r=>/^\d{4}-\d{2}$/.test(r.mes)).map(r=>r.mes))].sort();
+  _repopSel('ss-pessoa', ssPessoas, r => r, r => r);
+  _repopSel('ss-mes', ssMeses, m => RAW.social_selling.find(r=>r.mes===m)?.mes_label||m, m => m);
+  // SDR
+  const sdrPessoas = [...new Set(RAW.sdrs.map(r=>r.nome))].sort();
+  const sdrMeses = [...new Set(RAW.sdrs.filter(r=>/^\d{4}-\d{2}$/.test(r.mes)).map(r=>r.mes))].sort();
+  _repopSel('sdr-pessoa', sdrPessoas, r=>r, r=>r);
+  _repopSel('sdr-mes', sdrMeses, m => RAW.sdrs.find(r=>r.mes===m)?.mes_label||m, m=>m);
+  // SF
+  const sfPessoas = [...new Set(RAW.sf.map(r=>r.nome))].sort();
+  _repopSel('sf-pessoa', sfPessoas, r=>r, r=>r);
+}
+
+function _repopSel(id, items, labelFn, valFn) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  const cur = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  items.forEach(item => sel.add(new Option(labelFn(item), valFn(item))));
+  sel.value = cur;
+}
+
+// Spin animation
+const style = document.createElement('style');
+style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+document.head.appendChild(style);
+
+// ============================================================
+// GLOBAL FILTERS
+// ============================================================
+function populateGlobalMonths() {
+  const sel = document.getElementById('g-mes');
+  const allMes = [...new Set([...RAW.social_selling, ...RAW.sdrs, ...RAW.sf].map(r=>r.mes))].filter(m=>/^\d{4}-\d{2}$/.test(m)).sort();
+  allMes.forEach(m => {
+    const label = RAW.social_selling.find(r=>r.mes===m)?.mes_label || RAW.sdrs.find(r=>r.mes===m)?.mes_label || m;
+    sel.add(new Option(label, m));
+  });
+}
+
+function applyFilters() {
+  // Navigate to the right section based on time filter
+  const time = document.getElementById('g-time').value;
+  if (time) showPage(time || 'overview');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  populateGlobalMonths();
+  initSSFilters();
+  initSDRFilters();
+  initSFFilters();
+  renderOverview();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
